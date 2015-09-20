@@ -14,13 +14,17 @@ library(dplyr)
 library(ggplot2)
 
 activity <- read_csv("activity.csv", col_types = list(col_integer(), col_date(), col_integer()))
+
 activitybyday <- activity %>%
       group_by(date) %>%
       summarize(stepstotal = sum(steps))
+activitybyinterval <- activity %>%
+      group_by(interval) %>%
+      summarize(stepsmean = mean(steps, na.rm = TRUE))
 ```
 
 ## What is mean total number of steps taken per day?
-```{r }
+```{r histogram, warning=FALSE, message=FALSE}
 activitybyday %>%
       ggplot(aes(x=stepstotal)) +
       geom_histogram(binwidth = 5000, aes(fill=..count..)) +
@@ -38,11 +42,26 @@ print(paste("Median of total number of steps per day (integer): ", activitybyday
 ```
 
 ## What is the average daily activity pattern?
-
+```{r activity, warning=FALSE, message=FALSE}
+activitybyinterval %>%
+      ggplot(aes(x=interval, y=stepsmean)) +
+      geom_line() +
+      labs(x = "5-min interval", y = "Mean steps count")
+summary(activitybyinterval)
+activitybyinterval_max <- summarize(activitybyinterval, max = which.max(stepsmean)) %>%
+      unlist() %>%
+      as.vector() %>%
+      activitybyinterval[., 1] %>%
+      as.matrix() %>%
+      as.vector()
+print(paste("Interval ", activitybyinterval_max, " contains the maximum number of steps."))
+```
 
 
 ## Imputing missing values
-
-
+1. Calculate and report the total number of missing values in the dataset.
+```{r NA, warning=FALSE, message=FALSE}
+print(paste("The original dataset contains ", sum(is.na(activity)), " NAs."))
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?

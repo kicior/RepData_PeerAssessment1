@@ -10,9 +10,13 @@ library(dplyr)
 library(ggplot2)
 
 activity <- read_csv("activity.csv", col_types = list(col_integer(), col_date(), col_integer()))
+
 activitybyday <- activity %>%
       group_by(date) %>%
       summarize(stepstotal = sum(steps))
+activitybyinterval <- activity %>%
+      group_by(interval) %>%
+      summarize(stepsmean = mean(steps, na.rm = TRUE))
 ```
 
 ## What is mean total number of steps taken per day?
@@ -24,7 +28,7 @@ activitybyday %>%
       labs(x = "Total number of steps per day", y = "Steps count")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-1-1.png) 
+![](PA1_template_files/figure-html/histogram-1.png) 
 
 ```r
 summary(activitybyday)
@@ -66,10 +70,53 @@ print(paste("Median of total number of steps per day (integer): ", activitybyday
 
 ## What is the average daily activity pattern?
 
+```r
+activitybyinterval %>%
+      ggplot(aes(x=interval, y=stepsmean)) +
+      geom_line() +
+      labs(x = "5-min interval", y = "Mean steps count")
+```
+
+![](PA1_template_files/figure-html/activity-1.png) 
+
+```r
+summary(activitybyinterval)
+```
+
+```
+##     interval        stepsmean      
+##  Min.   :   0.0   Min.   :  0.000  
+##  1st Qu.: 588.8   1st Qu.:  2.486  
+##  Median :1177.5   Median : 34.113  
+##  Mean   :1177.5   Mean   : 37.383  
+##  3rd Qu.:1766.2   3rd Qu.: 52.835  
+##  Max.   :2355.0   Max.   :206.170
+```
+
+```r
+activitybyinterval_max <- summarize(activitybyinterval, max = which.max(stepsmean)) %>%
+      unlist() %>%
+      as.vector() %>%
+      activitybyinterval[., 1] %>%
+      as.matrix() %>%
+      as.vector()
+print(paste("Interval ", activitybyinterval_max, " contains the maximum number of steps."))
+```
+
+```
+## [1] "Interval  835  contains the maximum number of steps."
+```
 
 
 ## Imputing missing values
+1. Calculate and report the total number of missing values in the dataset.
 
+```r
+print(paste("The original dataset contains ", sum(is.na(activity)), " NAs."))
+```
 
+```
+## [1] "The original dataset contains  2304  NAs."
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
