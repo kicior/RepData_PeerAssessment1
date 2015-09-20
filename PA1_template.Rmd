@@ -12,6 +12,7 @@ library(magrittr)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(chron)
 
 activity <- read_csv("activity.csv", col_types = list(col_integer(), col_date(), col_integer()))
 
@@ -46,7 +47,7 @@ print(paste("Median of total number of steps per day (integer): ", activitybyday
 activitybyinterval %>%
       ggplot(aes(x=interval, y=stepsmean)) +
       geom_line() +
-      labs(x = "5-min interval", y = "Mean steps count")
+      labs(x = "5-min intervals", y = "Mean steps count")
 summary(activitybyinterval)
 activitybyinterval_max <- summarize(activitybyinterval, max = which.max(stepsmean)) %>%
       unlist() %>%
@@ -63,5 +64,62 @@ print(paste("Interval ", activitybyinterval_max, " contains the maximum number o
 ```{r NA, warning=FALSE, message=FALSE}
 print(paste("The original dataset contains ", sum(is.na(activity)), " NAs."))
 ```
+2. Devise a strategy for filling in all of the missing values in the dataset.
+NAs will be replaced with the mean for the 5-minute interval.
+
+```{r NAfilling, warning=FALSE, message=FALSE}
+activitynona <- activity
+activitybyintervalnonapre <- activitynona %>%
+      group_by(interval) %>%
+      summarize(stepsmean = mean(steps, na.rm = TRUE))
+for (i in which(is.na(activitynona)))
+      {
+      meanline <- which(activitybyintervalnonapre$interval == unlist(activitynona[i, 3]))
+      nonamean <- activitybyintervalnonapre[meanline, 2] %>% as.matrix() %>% as.vector()
+      activitynona[i, 1] <- nonamean
+      }
+
+activitybydaynona <- activitynona %>%
+      group_by(date) %>%
+      summarize(stepstotal = sum(steps))
+activitybydaynona %>%
+      ggplot(aes(x=stepstotal)) +
+      geom_histogram(binwidth = 5000, aes(fill=..count..)) +
+      labs(x = "Total number of steps per day noNA", y = "Steps count")
+summary(activitybydaynona)
+activitybydaynona_mean <- summarize(activitybydaynona, mean = mean(stepstotal, na.rm = TRUE)) %>%
+      as.matrix() %>%
+      as.vector() %>%
+      as.integer()
+activitybydaynona_median <- summarize(activitybydaynona, median = median(stepstotal, na.rm = TRUE)) %>%
+      as.matrix() %>%
+      as.vector()
+print(paste("Mean of total number of steps per day noNA (integer): ", activitybydaynona_mean))
+print(paste("Median of total number of steps per day noNA (integer): ", round(activitybydaynona_median, 0)))
+```
+The median increased and the total steps count also increased.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r week, warning=FALSE, message=FALSE}
+activityweekend <- activitynona %>%
+      mutate(dayweek = as.factor(ifelse(is.weekend(.$date), "weekend", "weekday"))) %>%
+      filter(dayweek == "weekend") %>%
+      group_by(interval) %>%
+      summarize(stepsmean = mean(steps, na.rm = TRUE)) %>%
+      mutate(dayweek = "weekend")
+activityweekday <- activitynona %>%
+      mutate(dayweek = as.factor(ifelse(is.weekend(.$date), "weekend", "weekday"))) %>%
+      filter(dayweek == "weekday") %>%
+      group_by(interval) %>%
+      summarize(stepsmean = mean(steps, na.rm = TRUE)) %>%
+      mutate(dayweek = "weekday")
+activitydayweek <- full_join(activityweekday, activityweekend) %>%
+      mutate(dayweek = as.factor(dayweek))
+activitydayweek %>%
+      ggplot(aes(x=interval, y=stepsmean)) +
+      geom_line() +
+      facet_grid(dayweek~.) +
+      labs(x = "5-min intervals", y = "Mean steps count")
+
+```
